@@ -65,6 +65,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElCascader } from 'element-plus'
+import { regionData } from 'element-china-area-data'
 import { fetchCategoryOptions, type CategoryItem } from '@/api/category'
 import { fetchFoodPostList, type PageResult, type FoodPostCard } from '@/api/post'
 import FoodCard from '@/components/FoodCard.vue'
@@ -93,75 +94,7 @@ const listData = ref<PageResult<FoodPostCard>>({
   records: [],
 })
 const regionProps = { value: 'value', label: 'label', children: 'children' }
-const regionOptions: RegionNode[] = [
-  {
-    value: 'zj',
-    label: '浙江省',
-    children: [
-      {
-        value: 'hz',
-        label: '杭州市',
-        children: [
-          { value: 'xh', label: '西湖区' },
-          { value: 'bj', label: '滨江区' },
-          { value: 'xc', label: '上城区' },
-        ],
-      },
-      {
-        value: 'nb',
-        label: '宁波市',
-        children: [
-          { value: 'yh', label: '鄞州区' },
-          { value: 'jb', label: '江北区' },
-        ],
-      },
-    ],
-  },
-  {
-    value: 'js',
-    label: '江苏省',
-    children: [
-      {
-        value: 'nj',
-        label: '南京市',
-        children: [
-          { value: 'gl', label: '鼓楼区' },
-          { value: 'xw', label: '玄武区' },
-        ],
-      },
-      {
-        value: 'sz',
-        label: '苏州市',
-        children: [
-          { value: 'gy', label: '姑苏区' },
-          { value: 'wy', label: '吴中区' },
-        ],
-      },
-    ],
-  },
-  {
-    value: 'gd',
-    label: '广东省',
-    children: [
-      {
-        value: 'gz',
-        label: '广州市',
-        children: [
-          { value: 'th', label: '天河区' },
-          { value: 'yx', label: '越秀区' },
-        ],
-      },
-      {
-        value: 'sz',
-        label: '深圳市',
-        children: [
-          { value: 'ns', label: '南山区' },
-          { value: 'ft', label: '福田区' },
-        ],
-      },
-    ],
-  },
-]
+const regionOptions: RegionNode[] = regionData as unknown as RegionNode[]
 
 const totalPages = computed(() => Math.max(1, Math.ceil(listData.value.total / pageSize)))
 const selectedRegionLabels = computed(() => mapRegionLabels(regionCode.value, regionOptions))

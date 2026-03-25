@@ -7,8 +7,10 @@ interface ApiEnvelope<T> {
   data: T
 }
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8080/api'
+
 const http = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: apiBaseUrl,
   timeout: 10000,
 })
 

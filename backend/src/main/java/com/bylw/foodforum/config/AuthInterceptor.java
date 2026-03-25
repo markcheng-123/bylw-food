@@ -18,8 +18,10 @@ public class AuthInterceptor implements HandlerInterceptor {
         "/api/system/health",
         "/api/categories/options",
         "/api/home",
+        "/api/home/stats",
         "/api/strategies",
-        "/api/ai/chat"
+        "/api/ai/chat",
+        "/api/ai/chat/stream"
     );
 
     private final AuthTokenUtil authTokenUtil;

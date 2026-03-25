@@ -37,6 +37,8 @@
     <main class="page">
       <RouterView />
     </main>
+
+    <AiChatWindow />
   </div>
 </template>
 
@@ -44,6 +46,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authState, clearAuthSession } from '@/stores/auth'
+import AiChatWindow from '@/components/ai/AiChatWindow.vue'
 
 const API_HOST = 'http://localhost:8080'
 const router = useRouter()

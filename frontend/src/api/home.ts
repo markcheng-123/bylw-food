@@ -30,6 +30,11 @@ export interface HomeData {
   latestPosts: FoodPostCard[]
 }
 
+export interface HomeStats {
+  totalPosts: number
+  todayNewPosts: number
+}
+
 export interface ApiResponse<T> {
   code: number
   message: string
@@ -38,4 +43,8 @@ export interface ApiResponse<T> {
 
 export function fetchHomeData() {
   return http.get<unknown, ApiResponse<HomeData>>('/home')
+}
+
+export function fetchHomeStats() {
+  return http.get<unknown, ApiResponse<HomeStats>>('/home/stats')
 }

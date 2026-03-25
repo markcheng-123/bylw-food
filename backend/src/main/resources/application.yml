@@ -33,8 +33,8 @@ app:
     token-secret: bylw-food-forum-secret-key
     token-expire-hours: 168
   ai:
-    enabled: false
-    base-url: https://api.openai.com/v1
-    model: gpt-4o-mini
-    api-key: ${OPENAI_API_KEY:}
-    system-prompt: 你是本地美食论坛的AI虚拟推荐官，请用简短友好的中文回答。
+    enabled: ${APP_AI_ENABLED:true}
+    base-url: ${APP_AI_BASE_URL:https://api.deepseek.com/v1}
+    model: ${APP_AI_MODEL:deepseek-chat}
+    api-key: ${DEEPSEEK_API_KEY:${OPENAI_API_KEY:}}
+    system-prompt: 你是本地美食论坛的AI推荐官，请优先基于平台真实数据给出简洁、可执行的中文推荐。

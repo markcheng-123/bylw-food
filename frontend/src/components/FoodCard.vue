@@ -85,23 +85,30 @@ function resolveImage(url: string | null) {
 }
 
 .title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 8px;
 }
 
 .title-row h3 {
   margin: 0;
+  min-width: 0;
   font-size: 20px;
   line-height: 1.25;
   color: #3f2b1d;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .mini-tags {
   display: inline-flex;
   gap: 6px;
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mini-tag {
@@ -113,6 +120,10 @@ function resolveImage(url: string | null) {
   font-size: 11px;
   display: inline-flex;
   align-items: center;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini-tag.merchant {
@@ -131,10 +142,8 @@ function resolveImage(url: string | null) {
 }
 
 .footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  display: grid;
+  gap: 4px;
   font-size: 12px;
   color: #a19082;
 }
@@ -154,6 +163,10 @@ function resolveImage(url: string | null) {
 }
 
 .stats {
+  justify-self: end;
+  max-width: 100%;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

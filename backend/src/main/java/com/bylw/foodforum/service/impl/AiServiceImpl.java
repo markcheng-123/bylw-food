@@ -9,11 +9,18 @@ import com.bylw.foodforum.service.AiService;
 import com.bylw.foodforum.service.FoodCategoryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -21,16 +28,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class AiServiceImpl implements AiService {
 
-    private static final Pattern BUDGET_PATTERN = Pattern.compile("(\\d{1,4})\\s*(元|块|rmb|RMB|¥|￥)?");
+    private static final Pattern BUDGET_PATTERN = Pattern.compile("(\\d{1,4})\\s*(元|块|rmb|RMB)?");
+    private static final long SSE_TIMEOUT_MS = 1000L * 60L * 5L;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -40,16 +50,16 @@ public class AiServiceImpl implements AiService {
     @Value("${app.ai.enabled:false}")
     private boolean enabled;
 
-    @Value("${app.ai.base-url:https://api.openai.com/v1}")
+    @Value("${app.ai.base-url:https://api.deepseek.com/v1}")
     private String baseUrl;
 
-    @Value("${app.ai.model:gpt-4o-mini}")
+    @Value("${app.ai.model:deepseek-chat}")
     private String model;
 
     @Value("${app.ai.api-key:}")
     private String apiKey;
 
-    @Value("${app.ai.system-prompt:你是本地美食论坛的AI虚拟推荐官，请用简短友好的中文回答。}")
+    @Value("${app.ai.system-prompt:你是本地美食论坛的AI推荐官，请优先基于平台真实数据给出简洁、可执行的中文推荐。}")
     private String systemPrompt;
 
     public AiServiceImpl(
@@ -67,7 +77,7 @@ public class AiServiceImpl implements AiService {
     @Override
     public String chat(String message) {
         if (!StringUtils.hasText(message)) {
-            throw new BusinessException("Message cannot be empty");
+            throw new BusinessException("消息不能为空");
         }
 
         String userMessage = message.trim();
@@ -75,26 +85,192 @@ public class AiServiceImpl implements AiService {
         List<FoodPost> candidates = queryCandidatePosts(userMessage, budget);
         String context = buildPostContext(candidates);
 
-        // 后续可以通过修改 base-url/model 切换到 DeepSeek 等模型。
         if (enabled && StringUtils.hasText(apiKey)) {
             try {
                 return callModel(userMessage, context);
             } catch (Exception ex) {
-                // 模型不可用时自动降级为本地数据推荐。
-                return buildLocalReply(userMessage, budget, candidates, "模型暂不可用，已切换到本地美食推荐：");
+                return buildLocalReply(userMessage, budget, candidates, "AI暂时不可用，已切换本地推荐：");
             }
         }
+        return buildLocalReply(userMessage, budget, candidates, "当前为本地推荐模式：");
+    }
 
-        return buildLocalReply(userMessage, budget, candidates, "当前为本地数据推荐（未启用外部大模型）：");
+    @Override
+    public SseEmitter streamChat(String prompt) {
+        if (!StringUtils.hasText(prompt)) {
+            throw new BusinessException("prompt不能为空");
+        }
+        final String userPrompt = prompt.trim();
+        final SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+        final AtomicBoolean closed = new AtomicBoolean(false);
+
+        emitter.onCompletion(() -> closed.set(true));
+        emitter.onTimeout(() -> {
+            closed.set(true);
+            emitter.complete();
+        });
+        emitter.onError(ex -> closed.set(true));
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                streamChatInternal(userPrompt, emitter, closed);
+            } catch (Exception ex) {
+                safeSend(emitter, closed, "error", "stream_failed:" + ex.getMessage());
+                safeComplete(emitter, closed);
+            }
+        });
+
+        return emitter;
+    }
+
+    private void streamChatInternal(String userPrompt, SseEmitter emitter, AtomicBoolean closed) {
+        Integer budget = extractBudget(userPrompt);
+        List<FoodPost> candidates = queryCandidatePosts(userPrompt, budget);
+        String context = buildPostContext(candidates);
+
+        if (!(enabled && StringUtils.hasText(apiKey))) {
+            streamLocalReply(userPrompt, budget, candidates, emitter, closed);
+            return;
+        }
+
+        try {
+            streamFromModel(userPrompt, context, emitter, closed);
+            safeSend(emitter, closed, "done", "[DONE]");
+            safeComplete(emitter, closed);
+        } catch (Exception ex) {
+            safeSend(emitter, closed, "error", "model_unavailable_fallback_local");
+            streamLocalReply(userPrompt, budget, candidates, emitter, closed);
+        }
+    }
+
+    private void streamFromModel(String userPrompt, String context, SseEmitter emitter, AtomicBoolean closed) {
+        final String url = baseUrl + "/chat/completions";
+
+        Map<String, Object> body = new HashMap<String, Object>();
+        body.put("model", model);
+        body.put("temperature", 0.35);
+        body.put("stream", Boolean.TRUE);
+        body.put("messages", Arrays.asList(
+            buildMessage("system", systemPrompt),
+            buildMessage("system", "以下是平台内可用的真实帖子数据，请优先基于这些数据推荐：\n" + context),
+            buildMessage("user", userPrompt)
+        ));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey.trim());
+
+        restTemplate.execute(
+            url,
+            HttpMethod.POST,
+            request -> {
+                request.getHeaders().putAll(headers);
+                objectMapper.writeValue(request.getBody(), body);
+            },
+            response -> {
+                InputStream responseBody = response.getBody();
+                if (responseBody == null) {
+                    throw new BusinessException("AI流式响应为空");
+                }
+
+                try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(responseBody, StandardCharsets.UTF_8))) {
+                    String line;
+                    while (!closed.get() && (line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (!StringUtils.hasText(line) || !line.startsWith("data:")) {
+                            continue;
+                        }
+                        String data = line.substring(5).trim();
+                        if ("[DONE]".equals(data)) {
+                            break;
+                        }
+                        String token = parseStreamToken(data);
+                        if (StringUtils.hasText(token)) {
+                            safeSend(emitter, closed, "data", token);
+                        }
+                    }
+                }
+                return null;
+            }
+        );
+    }
+
+    private String parseStreamToken(String data) {
+        try {
+            JsonNode root = objectMapper.readTree(data);
+            JsonNode choices = root.path("choices");
+            if (!choices.isArray() || choices.size() == 0) {
+                return "";
+            }
+
+            JsonNode first = choices.path(0);
+            JsonNode deltaContent = first.path("delta").path("content");
+            if (deltaContent.isTextual()) {
+                return deltaContent.asText();
+            }
+            JsonNode messageContent = first.path("message").path("content");
+            if (messageContent.isTextual()) {
+                return messageContent.asText();
+            }
+            return "";
+        } catch (Exception ex) {
+            return "";
+        }
+    }
+
+    private void streamLocalReply(
+        String userPrompt,
+        Integer budget,
+        List<FoodPost> candidates,
+        SseEmitter emitter,
+        AtomicBoolean closed
+    ) {
+        String reply = buildLocalReply(userPrompt, budget, candidates, "当前为本地推荐模式：");
+        for (int i = 0; i < reply.length() && !closed.get(); i += 3) {
+            int end = Math.min(i + 3, reply.length());
+            safeSend(emitter, closed, "data", reply.substring(i, end));
+            try {
+                Thread.sleep(14L);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        safeSend(emitter, closed, "done", "[DONE]");
+        safeComplete(emitter, closed);
+    }
+
+    private void safeSend(SseEmitter emitter, AtomicBoolean closed, String event, String data) {
+        if (closed.get()) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event().name(event).data(data));
+        } catch (IOException | IllegalStateException ex) {
+            closed.set(true);
+        }
+    }
+
+    private void safeComplete(SseEmitter emitter, AtomicBoolean closed) {
+        if (closed.get()) {
+            return;
+        }
+        closed.set(true);
+        try {
+            emitter.complete();
+        } catch (Exception ignored) {
+            // ignore
+        }
     }
 
     private String callModel(String userMessage, String context) throws Exception {
         Map<String, Object> body = new HashMap<String, Object>();
         body.put("model", model);
-        body.put("temperature", 0.4);
+        body.put("temperature", 0.35);
         body.put("messages", Arrays.asList(
             buildMessage("system", systemPrompt),
-            buildMessage("system", "以下是平台内可用的美食帖子数据，请优先基于这些数据推荐：\n" + context),
+            buildMessage("system", "以下是平台内可用的真实帖子数据，请优先基于这些数据推荐：\n" + context),
             buildMessage("user", userMessage)
         ));
 
@@ -104,10 +280,11 @@ public class AiServiceImpl implements AiService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<Map<String, Object>>(body, headers);
         ResponseEntity<String> response = restTemplate.postForEntity(baseUrl + "/chat/completions", entity, String.class);
+
         JsonNode root = objectMapper.readTree(response.getBody());
         JsonNode contentNode = root.path("choices").path(0).path("message").path("content");
         if (!contentNode.isTextual()) {
-            throw new BusinessException("AI response is empty");
+            throw new BusinessException("AI响应为空");
         }
         return contentNode.asText();
     }
@@ -135,13 +312,16 @@ public class AiServiceImpl implements AiService {
         if (budget != null) {
             wrapper.isNotNull(FoodPost::getPerCapita).le(FoodPost::getPerCapita, budget);
         }
+
         if (StringUtils.hasText(message)) {
             String keyword = message.trim();
             wrapper.and(item -> item.like(FoodPost::getTitle, keyword)
                 .or()
                 .like(FoodPost::getSummary, keyword)
                 .or()
-                .like(FoodPost::getAddress, keyword));
+                .like(FoodPost::getAddress, keyword)
+                .or()
+                .like(FoodPost::getContent, keyword));
         }
 
         List<FoodPost> posts = foodPostMapper.selectList(wrapper);
@@ -156,9 +336,11 @@ public class AiServiceImpl implements AiService {
             .orderByDesc(FoodPost::getViewCount)
             .orderByDesc(FoodPost::getCreatedAt)
             .last("LIMIT 8");
+
         if (budget != null) {
             fallback.isNotNull(FoodPost::getPerCapita).le(FoodPost::getPerCapita, budget);
         }
+
         return foodPostMapper.selectList(fallback);
     }
 
@@ -182,7 +364,7 @@ public class AiServiceImpl implements AiService {
         List<String> lines = new ArrayList<String>();
         for (FoodPost post : posts) {
             String line = String.format(
-                "#%d | %s | 分类:%s | 人均:%s | 地址:%s | 简介:%s",
+                "#%d | %s | 分类:%s | 人均:%s | 地址:%s | 摘要:%s",
                 post.getId(),
                 safe(post.getTitle()),
                 safe(categoryMap.get(post.getCategoryId())),
@@ -200,14 +382,14 @@ public class AiServiceImpl implements AiService {
         sb.append(prefix).append("\n");
 
         if (posts == null || posts.isEmpty()) {
-            sb.append("暂时没找到匹配内容，你可以换个关键词或预算再试试。");
+            sb.append("暂时没有找到匹配内容，你可以换个关键词、区域或预算再试试。");
             return sb.toString();
         }
 
         if (budget != null) {
-            sb.append("按人均 ").append(budget).append(" 元以内为你筛选如下：\n");
+            sb.append("按人均 ").append(budget).append(" 元以内，为你推荐：\n");
         } else {
-            sb.append("按热度为你推荐如下：\n");
+            sb.append("按当前热度，为你推荐：\n");
         }
 
         for (int i = 0; i < posts.size() && i < 5; i++) {
@@ -224,9 +406,8 @@ public class AiServiceImpl implements AiService {
                 .append("）\n");
         }
 
-        sb.append("\n你也可以继续补充口味、区域、预算，我再细化推荐。"
-        );
-        sb.append("\n本次问题：").append(userMessage);
+        sb.append("\n你也可以继续补充口味、预算和区域，我会给你更精准的推荐。");
+        sb.append("\n本次输入：").append(userMessage);
         return sb.toString().trim();
     }
 
