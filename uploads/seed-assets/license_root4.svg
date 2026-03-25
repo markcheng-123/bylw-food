@@ -1,0 +1,27 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>
+  <defs>
+    <linearGradient id='bg' x1='0' y1='0' x2='1' y2='1'>
+      <stop offset='0%' stop-color='#f9efd7'/>
+      <stop offset='100%' stop-color='#f2dfb7'/>
+    </linearGradient>
+  </defs>
+  <rect width='1200' height='800' fill='url(#bg)'/>
+  <rect x='52' y='52' width='1096' height='696' rx='16' fill='rgba(255,255,255,0.92)' stroke='#d7be8a' stroke-width='4'/>
+  <text x='600' y='130' text-anchor='middle' font-size='56' font-family='Microsoft YaHei, SimHei, Arial' fill='#7a1f1f' font-weight='700'>营业执照</text>
+  <text x='600' y='175' text-anchor='middle' font-size='24' font-family='Microsoft YaHei, SimHei, Arial' fill='#9a5d2e'>市场监督管理局电子存档副本</text>
+  <g font-family='Microsoft YaHei, SimHei, Arial' fill='#2f2f2f' font-size='30'>
+    <text x='110' y='260'>名    称：渝味火锅局</text>
+    <text x='110' y='320'>统一社会信用代码：91500103MA5U8P1N2B</text>
+    <text x='110' y='380'>法定代表人：王强</text>
+    <text x='110' y='440'>住    所：重庆市 渝中区 解放碑步行街9号</text>
+    <text x='110' y='500'>成立日期：2024年04月02日</text>
+    <text x='110' y='560'>有效期限：2024年04月02日至2034年04月01日</text>
+    <text x='110' y='620'>经营范围：餐饮服务、预包装食品销售</text>
+  </g>
+  <g>
+    <circle cx='980' cy='590' r='102' fill='none' stroke='#c82828' stroke-width='8'/>
+    <text x='980' y='585' text-anchor='middle' font-size='28' font-family='Microsoft YaHei, SimHei, Arial' fill='#c82828' font-weight='700'>重庆市场监管局</text>
+    <text x='980' y='622' text-anchor='middle' font-size='28' font-family='Microsoft YaHei, SimHei, Arial' fill='#c82828' font-weight='700'>专用章</text>
+  </g>
+  <text x='860' y='700' font-size='24' font-family='Microsoft YaHei, SimHei, Arial' fill='#5d5d5d'>发证日期：2025年03月18日</text>
+</svg>

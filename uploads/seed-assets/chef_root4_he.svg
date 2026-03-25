@@ -1,0 +1,17 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>
+  <defs>
+    <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+      <stop offset='0%' stop-color='#f0efe9'/>
+      <stop offset='100%' stop-color='#ddd6c8'/>
+    </linearGradient>
+  </defs>
+  <rect width='1200' height='800' fill='url(#g)'/>
+  <rect x='70' y='70' width='1060' height='660' rx='26' fill='rgba(255,255,255,0.93)'/>
+  <text x='120' y='250' font-size='72' font-family='Microsoft YaHei, SimHei, Arial' fill='#2f2f2f' font-weight='700'>何师傅</text>
+  <text x='120' y='340' font-size='38' font-family='Microsoft YaHei, SimHei, Arial' fill='#4f4f4f'>后厨总管</text>
+  <text x='120' y='410' font-size='30' font-family='Microsoft YaHei, SimHei, Arial' fill='#666'>从业12年，擅长地方菜与出品把控</text>
+  <g transform='translate(980 120)'>
+    <rect x='-130' y='-48' width='260' height='96' rx='48' fill='rgba(146,84,31,.16)'/>
+    <text x='0' y='16' text-anchor='middle' font-size='36' font-family='Microsoft YaHei, SimHei, Arial' fill='#7a4c1d' font-weight='700'>厨师</text>
+  </g>
+</svg>
