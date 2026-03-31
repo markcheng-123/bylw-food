@@ -12,6 +12,7 @@ import com.bylw.foodforum.vo.admin.ImageMigrationResultVO;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -160,6 +161,7 @@ public class ImageMigrationServiceImpl implements ImageMigrationService {
         if (urlCache.containsKey(localUrl)) {
             return urlCache.get(localUrl);
         }
+
         String fileName = localUrl.substring(LOCAL_PREFIX.length());
         File localFile = new File(uploadPath, fileName);
         if (!localFile.exists() || !localFile.isFile()) {
@@ -205,20 +207,38 @@ public class ImageMigrationServiceImpl implements ImageMigrationService {
     }
 
     private String normalizeEndpoint(String endpoint) {
-        String trimmed = endpoint.trim();
-        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-            return trimmed;
+        String trimmed = endpoint == null ? "" : endpoint.trim();
+        if (!StringUtils.hasText(trimmed)) {
+            return "";
         }
-        return "https://" + trimmed;
+        if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+            trimmed = "https://" + trimmed;
+        }
+        if (trimmed.endsWith("/")) {
+            return trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     private String extractEndpointHost(String endpoint) {
-        String trimmed = endpoint.trim();
-        if (trimmed.startsWith("http://")) {
-            return trimmed.substring("http://".length());
+        try {
+            URI uri = URI.create(endpoint);
+            if (StringUtils.hasText(uri.getHost())) {
+                return uri.getHost();
+            }
+        } catch (Exception ignored) {
+            // Fallback to plain string parsing.
         }
-        if (trimmed.startsWith("https://")) {
-            return trimmed.substring("https://".length());
+
+        String trimmed = endpoint == null ? "" : endpoint.trim();
+        if (trimmed.startsWith("http://")) {
+            trimmed = trimmed.substring("http://".length());
+        } else if (trimmed.startsWith("https://")) {
+            trimmed = trimmed.substring("https://".length());
+        }
+        int slashIndex = trimmed.indexOf('/');
+        if (slashIndex > 0) {
+            return trimmed.substring(0, slashIndex);
         }
         return trimmed;
     }

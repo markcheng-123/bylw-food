@@ -19,9 +19,11 @@ com\bylw\foodforum\service\FoodDishService.class
 com\bylw\foodforum\service\FoodPostService.class
 com\bylw\foodforum\entity\FoodCategory.class
 com\bylw\foodforum\service\impl\FoodImageServiceImpl.class
+com\bylw\foodforum\service\HomeService.class
 com\bylw\foodforum\vo\post\FoodPostDetailVO.class
 com\bylw\foodforum\common\util\AuthTokenUtil.class
 com\bylw\foodforum\controller\UserController.class
+com\bylw\foodforum\service\impl\HomeServiceImpl.class
 com\bylw\foodforum\entity\Comment.class
 com\bylw\foodforum\dto\post\PostDishDTO.class
 com\bylw\foodforum\service\MerchantApplicationService.class
@@ -40,6 +42,7 @@ com\bylw\foodforum\vo\comment\CommentVO.class
 com\bylw\foodforum\FoodForumApplication.class
 com\bylw\foodforum\dto\BasePageQueryDTO.class
 com\bylw\foodforum\service\FoodImageService.class
+com\bylw\foodforum\dto\user\UserPasswordChangeDTO.class
 com\bylw\foodforum\vo\category\CategoryVO.class
 com\bylw\foodforum\vo\admin\AdminPostVO.class
 com\bylw\foodforum\mapper\LikeRecordMapper.class
@@ -115,6 +118,7 @@ com\bylw\foodforum\vo\post\FoodDishVO.class
 com\bylw\foodforum\service\impl\FoodCategoryServiceImpl.class
 com\bylw\foodforum\service\UploadService.class
 com\bylw\foodforum\controller\AdminController.class
+com\bylw\foodforum\vo\home\HomeStatsVO.class
 com\bylw\foodforum\vo\LabelValueVO.class
 com\bylw\foodforum\vo\post\FoodPostVO.class
 com\bylw\foodforum\service\UserService.class

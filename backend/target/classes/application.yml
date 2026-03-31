@@ -1,9 +1,16 @@
-﻿server:
+server:
   port: 8080
+  servlet:
+    encoding:
+      enabled: true
+      charset: UTF-8
+      force: true
 
 spring:
   application:
     name: food-forum-backend
+  config:
+    import: optional:file:./config/local-secrets.yml
   servlet:
     multipart:
       max-file-size: 25MB
@@ -22,19 +29,19 @@ mybatis-plus:
 app:
   upload-path: D:/Development/Projects/bylw/uploads
   upload:
-    oss-enabled: ${APP_UPLOAD_OSS_ENABLED:true}
-    endpoint: ${ALIYUN_OSS_ENDPOINT:oss-cn-hangzhou.aliyuncs.com}
-    bucket: ${ALIYUN_OSS_BUCKET:food-forum-assets}
-    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:}
-    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
-    dir-prefix: ${ALIYUN_OSS_DIR_PREFIX:bylw/}
-    public-base-url: ${ALIYUN_OSS_PUBLIC_BASE_URL:https://food-forum-assets.oss-cn-hangzhou.aliyuncs.com}
+    oss-enabled: false
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    bucket: food-forum-assets
+    access-key-id: ""
+    access-key-secret: ""
+    dir-prefix: bylw/
+    public-base-url: https://food-forum-assets.oss-cn-hangzhou.aliyuncs.com
   auth:
     token-secret: bylw-food-forum-secret-key
     token-expire-hours: 168
   ai:
     enabled: false
-    base-url: https://api.openai.com/v1
-    model: gpt-4o-mini
-    api-key: ${OPENAI_API_KEY:}
-    system-prompt: 你是本地美食论坛的AI虚拟推荐官，请用简短友好的中文回答。
+    base-url: https://api.deepseek.com/v1
+    model: deepseek-chat
+    api-key: ""
+    system-prompt: 你是本地美食论坛的AI推荐官，请优先基于平台真实数据给出简洁、可执行的中文推荐。

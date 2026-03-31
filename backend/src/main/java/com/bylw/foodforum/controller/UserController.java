@@ -2,6 +2,7 @@ package com.bylw.foodforum.controller;
 
 import com.bylw.foodforum.common.ApiResponse;
 import com.bylw.foodforum.dto.user.UserLoginDTO;
+import com.bylw.foodforum.dto.user.UserPasswordChangeDTO;
 import com.bylw.foodforum.dto.user.UserProfileUpdateDTO;
 import com.bylw.foodforum.dto.user.UserRegisterDTO;
 import com.bylw.foodforum.service.CommentService;
@@ -44,12 +45,12 @@ public class UserController {
 
     @PostMapping("/register")
     public ApiResponse<UserProfileVO> register(@Valid @RequestBody UserRegisterDTO registerDTO) {
-        return ApiResponse.success("注册成功", userService.register(registerDTO));
+        return ApiResponse.success("Register success", userService.register(registerDTO));
     }
 
     @PostMapping("/login")
     public ApiResponse<UserLoginVO> login(@Valid @RequestBody UserLoginDTO loginDTO) {
-        return ApiResponse.success("登录成功", userService.login(loginDTO));
+        return ApiResponse.success("Login success", userService.login(loginDTO));
     }
 
     @GetMapping("/me")
@@ -59,7 +60,13 @@ public class UserController {
 
     @PutMapping("/me")
     public ApiResponse<UserProfileVO> updateCurrentUserProfile(@Valid @RequestBody UserProfileUpdateDTO updateDTO) {
-        return ApiResponse.success("个人资料已更新", userService.updateCurrentUserProfile(updateDTO));
+        return ApiResponse.success("Profile updated successfully", userService.updateCurrentUserProfile(updateDTO));
+    }
+
+    @PutMapping("/me/password")
+    public ApiResponse<Void> changeCurrentUserPassword(@Valid @RequestBody UserPasswordChangeDTO passwordChangeDTO) {
+        userService.changeCurrentUserPassword(passwordChangeDTO);
+        return ApiResponse.success("密码修改成功", null);
     }
 
     @GetMapping("/me/posts")

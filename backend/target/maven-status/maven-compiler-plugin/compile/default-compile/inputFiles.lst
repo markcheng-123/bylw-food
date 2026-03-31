@@ -16,6 +16,7 @@ D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\mercha
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\entity\Comment.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\controller\UploadController.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\controller\CategoryController.java
+D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\vo\home\HomeStatsVO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\common\exception\BusinessException.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\merchant\MerchantProfileAuditDTO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\service\MerchantProfileService.java
@@ -66,6 +67,7 @@ D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\controller
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\BasePageQueryDTO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\vo\user\UserLoginVO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\category\CategorySaveDTO.java
+D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\user\UserPasswordChangeDTO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\mapper\MerchantApplicationMapper.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\config\PasswordConfig.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\entity\LikeRecord.java
@@ -75,6 +77,7 @@ D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\post\F
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\post\FoodPostCreateDTO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\controller\SystemController.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\vo\post\FoodPostCardVO.java
+D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\service\HomeService.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\mapper\LikeRecordMapper.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\service\impl\ImageMigrationServiceImpl.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\entity\FoodCategory.java
@@ -97,6 +100,7 @@ D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\vo\comment
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\vo\strategy\StrategyCardVO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\common\util\AuthTokenUtil.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\dto\ai\AiChatDTO.java
+D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\service\impl\HomeServiceImpl.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\vo\post\FoodPostDetailVO.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\controller\LikeController.java
 D:\Development\Projects\bylw\backend\src\main\java\com\bylw\foodforum\mapper\UserMapper.java

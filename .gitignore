@@ -22,3 +22,24 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+# Local secret env files
+.env
+.env.local
+.env.*.local
+
+# Backend local env files
+backend/.env
+backend/.env.local
+backend/config/local-secrets.yml
+
+# Frontend local env files
+frontend/.env
+frontend/.env.local
+
+# Runtime / build artifacts
+backend/target/
+frontend/.vite/
+backend-run.log
+backend-run.err
+frontend-run.log
+frontend-run.err

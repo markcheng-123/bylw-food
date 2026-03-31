@@ -37,6 +37,12 @@ export interface UpdateProfilePayload {
   email?: string
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
 export interface LoginResult {
   token: string
   userInfo: UserProfile
@@ -66,6 +72,10 @@ export function fetchMyProfile() {
 
 export function updateMyProfile(payload: UpdateProfilePayload) {
   return http.put<unknown, ApiResponse<UserProfile>>('/users/me', payload)
+}
+
+export function changeMyPassword(payload: ChangePasswordPayload) {
+  return http.put<unknown, ApiResponse<null>>('/users/me/password', payload)
 }
 
 export function fetchMyPosts() {

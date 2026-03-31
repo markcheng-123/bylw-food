@@ -6,22 +6,22 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: () => import('@/layouts/AppLayout.vue'),
+      component: () => import('@/layouts/user/AppLayout.vue'),
       children: [
         {
           path: '',
           name: 'home',
-          component: () => import('@/views/HomeView.vue'),
+          component: () => import('@/views/user/HomeView.vue'),
         },
         {
           path: 'food',
           name: 'food-list',
-          component: () => import('@/views/FoodListView.vue'),
+          component: () => import('@/views/user/FoodListView.vue'),
         },
         {
           path: 'food/:id',
           name: 'food-detail',
-          component: () => import('@/views/FoodDetailView.vue'),
+          component: () => import('@/views/user/FoodDetailView.vue'),
           props: true,
         },
         {
@@ -35,7 +35,7 @@ const router = createRouter({
         {
           path: 'publish',
           name: 'publish',
-          component: () => import('@/views/PublishView.vue'),
+          component: () => import('@/views/user/PublishView.vue'),
           meta: {
             requiresAuth: true,
           },
@@ -43,7 +43,7 @@ const router = createRouter({
         {
           path: 'merchant/apply',
           name: 'merchant-apply',
-          component: () => import('@/views/MerchantApplyView.vue'),
+          component: () => import('@/views/user/MerchantApplyView.vue'),
           meta: {
             requiresAuth: true,
           },
@@ -51,7 +51,7 @@ const router = createRouter({
         {
           path: 'profile',
           name: 'profile',
-          component: () => import('@/views/ProfileView.vue'),
+          component: () => import('@/views/user/ProfileView.vue'),
           meta: {
             requiresAuth: true,
           },
@@ -60,7 +60,7 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      component: () => import('@/layouts/AdminLayout.vue'),
+      component: () => import('@/layouts/admin/AdminLayout.vue'),
       meta: {
         requiresAuth: true,
         requiresAdmin: true,
@@ -72,7 +72,7 @@ const router = createRouter({
         {
           path: 'dashboard',
           name: 'admin-dashboard',
-          component: () => import('@/views/AdminDashboardView.vue'),
+          component: () => import('@/views/admin/AdminDashboardView.vue'),
           meta: {
             requiresAuth: true,
             requiresAdmin: true,
@@ -82,7 +82,7 @@ const router = createRouter({
         {
           path: 'manage',
           name: 'admin-manage',
-          component: () => import('@/views/AdminConsoleView.vue'),
+          component: () => import('@/views/admin/AdminConsoleView.vue'),
           meta: {
             requiresAuth: true,
             requiresAdmin: true,
@@ -92,7 +92,7 @@ const router = createRouter({
         {
           path: 'map',
           name: 'admin-map',
-          component: () => import('@/views/AdminMapMonitorView.vue'),
+          component: () => import('@/views/admin/AdminMapMonitorView.vue'),
           meta: {
             requiresAuth: true,
             requiresAdmin: true,
@@ -104,7 +104,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('@/views/LoginView.vue'),
+      component: () => import('@/views/auth/LoginView.vue'),
       meta: {
         guestOnly: true,
       },
@@ -112,7 +112,7 @@ const router = createRouter({
     {
       path: '/register',
       name: 'register',
-      component: () => import('@/views/RegisterView.vue'),
+      component: () => import('@/views/auth/RegisterView.vue'),
       meta: {
         guestOnly: true,
       },

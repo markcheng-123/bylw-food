@@ -6,6 +6,7 @@ import com.bylw.foodforum.common.context.UserContext;
 import com.bylw.foodforum.common.exception.BusinessException;
 import com.bylw.foodforum.common.util.AuthTokenUtil;
 import com.bylw.foodforum.dto.user.UserLoginDTO;
+import com.bylw.foodforum.dto.user.UserPasswordChangeDTO;
 import com.bylw.foodforum.dto.user.UserProfileUpdateDTO;
 import com.bylw.foodforum.dto.user.UserRegisterDTO;
 import com.bylw.foodforum.entity.User;
@@ -79,6 +80,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         currentUser.setEmail(emptyToNull(updateDTO.getEmail()));
         updateById(currentUser);
         return toProfileVO(currentUser);
+    }
+
+    @Override
+    public void changeCurrentUserPassword(UserPasswordChangeDTO passwordChangeDTO) {
+        User currentUser = getCurrentUserEntity();
+        if (!passwordEncoder.matches(passwordChangeDTO.getCurrentPassword(), currentUser.getPassword())) {
+            throw new BusinessException("当前密码不正确");
+        }
+        if (!passwordChangeDTO.getNewPassword().equals(passwordChangeDTO.getConfirmPassword())) {
+            throw new BusinessException("两次输入的新密码不一致");
+        }
+        if (passwordEncoder.matches(passwordChangeDTO.getNewPassword(), currentUser.getPassword())) {
+            throw new BusinessException("新密码不能与当前密码相同");
+        }
+
+        currentUser.setPassword(passwordEncoder.encode(passwordChangeDTO.getNewPassword()));
+        updateById(currentUser);
     }
 
     @Override

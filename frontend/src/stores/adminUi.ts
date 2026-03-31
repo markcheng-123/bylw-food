@@ -1,4 +1,4 @@
-import { computed, reactive } from 'vue'
+﻿import { computed, reactive } from 'vue'
 
 type AdminTheme = 'dark' | 'light'
 type AdminLocale = 'zh' | 'en'
@@ -83,10 +83,18 @@ const messages = {
     close: '关闭',
     backendFields: '后端字段',
     chinaMap: '美食分布实时地图',
+    language: '语言',
+    collapse: '收起',
+    expand: '展开',
+    administrator: '管理员',
+    uploading: '上传中...',
+    changeAvatar: '更换头像',
+    avatarUpdateSuccess: '头像更新成功',
+    avatarUpdateFailed: '头像更新失败',
   },
   en: {
-    adminWorkspace: 'Admin Control Center',
-    adminAccount: 'Administrator',
+    adminWorkspace: 'Admin Workspace',
+    adminAccount: 'Administrator Account',
     systemAdmin: 'System Administrator',
     systemStatus: 'System Status',
     running: 'Running',
@@ -125,7 +133,7 @@ const messages = {
     mapInteractive: 'Supports province highlight, hover tooltip and click to view Top 5 merchants.',
     contentReview: 'Post Review',
     merchantReview: 'Merchant Review',
-    categoryManage: 'Category Manage',
+    categoryManage: 'Category Management',
     statusFilter: 'Status Filter',
     all: 'All',
     pending: 'Pending',
@@ -147,7 +155,7 @@ const messages = {
     reviewReason: 'Review Remark / Reject Reason',
     rejectApplication: 'Reject Application',
     categoryName: 'Category Name',
-    iconOptional: 'Icon (optional)',
+    iconOptional: 'Icon (Optional)',
     sortValue: 'Sort Value',
     updateCategory: 'Update Category',
     createCategory: 'Create Category',
@@ -160,6 +168,14 @@ const messages = {
     close: 'Close',
     backendFields: 'Backend Fields',
     chinaMap: 'Real-time Food Distribution Map',
+    language: 'Language',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    administrator: 'Administrator',
+    uploading: 'Uploading...',
+    changeAvatar: 'Change Avatar',
+    avatarUpdateSuccess: 'Avatar updated successfully',
+    avatarUpdateFailed: 'Avatar update failed',
   },
 } as const
 

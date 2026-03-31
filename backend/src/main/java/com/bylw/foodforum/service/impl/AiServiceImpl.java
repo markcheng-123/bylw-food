@@ -39,7 +39,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Service
 public class AiServiceImpl implements AiService {
 
-    private static final Pattern BUDGET_PATTERN = Pattern.compile("(\\d{1,4})\\s*(元|块|rmb|RMB)?");
+    private static final Pattern BUDGET_PATTERN = Pattern.compile("(\\d{1,4})");
     private static final long SSE_TIMEOUT_MS = 1000L * 60L * 5L;
 
     private final RestTemplate restTemplate;
@@ -59,7 +59,7 @@ public class AiServiceImpl implements AiService {
     @Value("${app.ai.api-key:}")
     private String apiKey;
 
-    @Value("${app.ai.system-prompt:你是本地美食论坛的AI推荐官，请优先基于平台真实数据给出简洁、可执行的中文推荐。}")
+    @Value("${app.ai.system-prompt:You are an AI food recommendation assistant. Prioritize recommendations based on real posts from this platform.}")
     private String systemPrompt;
 
     public AiServiceImpl(
@@ -77,7 +77,7 @@ public class AiServiceImpl implements AiService {
     @Override
     public String chat(String message) {
         if (!StringUtils.hasText(message)) {
-            throw new BusinessException("消息不能为空");
+            throw new BusinessException("Message cannot be empty");
         }
 
         String userMessage = message.trim();
@@ -89,17 +89,18 @@ public class AiServiceImpl implements AiService {
             try {
                 return callModel(userMessage, context);
             } catch (Exception ex) {
-                return buildLocalReply(userMessage, budget, candidates, "AI暂时不可用，已切换本地推荐：");
+                return buildLocalReply(userMessage, budget, candidates, "AI is temporarily unavailable. Switched to local recommendation mode:");
             }
         }
-        return buildLocalReply(userMessage, budget, candidates, "当前为本地推荐模式：");
+        return buildLocalReply(userMessage, budget, candidates, "Running in local recommendation mode:");
     }
 
     @Override
     public SseEmitter streamChat(String prompt) {
         if (!StringUtils.hasText(prompt)) {
-            throw new BusinessException("prompt不能为空");
+            throw new BusinessException("Prompt cannot be empty");
         }
+
         final String userPrompt = prompt.trim();
         final SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
         final AtomicBoolean closed = new AtomicBoolean(false);
@@ -152,7 +153,7 @@ public class AiServiceImpl implements AiService {
         body.put("stream", Boolean.TRUE);
         body.put("messages", Arrays.asList(
             buildMessage("system", systemPrompt),
-            buildMessage("system", "以下是平台内可用的真实帖子数据，请优先基于这些数据推荐：\n" + context),
+            buildMessage("system", "Real post data from this platform:\n" + context),
             buildMessage("user", userPrompt)
         ));
 
@@ -170,7 +171,7 @@ public class AiServiceImpl implements AiService {
             response -> {
                 InputStream responseBody = response.getBody();
                 if (responseBody == null) {
-                    throw new BusinessException("AI流式响应为空");
+                    throw new BusinessException("AI stream response is empty");
                 }
 
                 try (BufferedReader reader = new BufferedReader(
@@ -226,7 +227,7 @@ public class AiServiceImpl implements AiService {
         SseEmitter emitter,
         AtomicBoolean closed
     ) {
-        String reply = buildLocalReply(userPrompt, budget, candidates, "当前为本地推荐模式：");
+        String reply = buildLocalReply(userPrompt, budget, candidates, "Running in local recommendation mode:");
         for (int i = 0; i < reply.length() && !closed.get(); i += 3) {
             int end = Math.min(i + 3, reply.length());
             safeSend(emitter, closed, "data", reply.substring(i, end));
@@ -237,6 +238,7 @@ public class AiServiceImpl implements AiService {
                 break;
             }
         }
+
         safeSend(emitter, closed, "done", "[DONE]");
         safeComplete(emitter, closed);
     }
@@ -270,7 +272,7 @@ public class AiServiceImpl implements AiService {
         body.put("temperature", 0.35);
         body.put("messages", Arrays.asList(
             buildMessage("system", systemPrompt),
-            buildMessage("system", "以下是平台内可用的真实帖子数据，请优先基于这些数据推荐：\n" + context),
+            buildMessage("system", "Real post data from this platform:\n" + context),
             buildMessage("user", userMessage)
         ));
 
@@ -284,7 +286,7 @@ public class AiServiceImpl implements AiService {
         JsonNode root = objectMapper.readTree(response.getBody());
         JsonNode contentNode = root.path("choices").path(0).path("message").path("content");
         if (!contentNode.isTextual()) {
-            throw new BusinessException("AI响应为空");
+            throw new BusinessException("AI response is empty");
         }
         return contentNode.asText();
     }
@@ -346,7 +348,7 @@ public class AiServiceImpl implements AiService {
 
     private String buildPostContext(List<FoodPost> posts) {
         if (posts == null || posts.isEmpty()) {
-            return "暂无可用帖子数据";
+            return "No available post data";
         }
 
         List<Long> categoryIds = posts.stream()
@@ -364,11 +366,11 @@ public class AiServiceImpl implements AiService {
         List<String> lines = new ArrayList<String>();
         for (FoodPost post : posts) {
             String line = String.format(
-                "#%d | %s | 分类:%s | 人均:%s | 地址:%s | 摘要:%s",
+                "#%d | %s | category:%s | per_capita:%s | address:%s | summary:%s",
                 post.getId(),
                 safe(post.getTitle()),
                 safe(categoryMap.get(post.getCategoryId())),
-                post.getPerCapita() == null ? "未知" : post.getPerCapita() + "元",
+                post.getPerCapita() == null ? "unknown" : post.getPerCapita() + " CNY",
                 safe(post.getAddress()),
                 safe(post.getSummary())
             );
@@ -382,14 +384,14 @@ public class AiServiceImpl implements AiService {
         sb.append(prefix).append("\n");
 
         if (posts == null || posts.isEmpty()) {
-            sb.append("暂时没有找到匹配内容，你可以换个关键词、区域或预算再试试。");
+            sb.append("No matching content found. Try another keyword, area, or budget.");
             return sb.toString();
         }
 
         if (budget != null) {
-            sb.append("按人均 ").append(budget).append(" 元以内，为你推荐：\n");
+            sb.append("Recommendations under ").append(budget).append(" CNY per person:\n");
         } else {
-            sb.append("按当前热度，为你推荐：\n");
+            sb.append("Recommendations by current popularity:\n");
         }
 
         for (int i = 0; i < posts.size() && i < 5; i++) {
@@ -397,17 +399,17 @@ public class AiServiceImpl implements AiService {
             sb.append(i + 1)
                 .append(". ")
                 .append(safe(post.getTitle()))
-                .append("（人均：")
-                .append(post.getPerCapita() == null ? "未知" : post.getPerCapita() + "元")
-                .append("，地址：")
+                .append(" (per capita: ")
+                .append(post.getPerCapita() == null ? "unknown" : post.getPerCapita() + " CNY")
+                .append(", address: ")
                 .append(safe(post.getAddress()))
-                .append("，详情：/food/")
+                .append(", detail: /food/")
                 .append(post.getId())
-                .append("）\n");
+                .append(")\n");
         }
 
-        sb.append("\n你也可以继续补充口味、预算和区域，我会给你更精准的推荐。");
-        sb.append("\n本次输入：").append(userMessage);
+        sb.append("\nShare more taste, budget, and location details for a more precise recommendation.");
+        sb.append("\nInput: ").append(userMessage);
         return sb.toString().trim();
     }
 
@@ -419,6 +421,6 @@ public class AiServiceImpl implements AiService {
     }
 
     private String safe(String value) {
-        return StringUtils.hasText(value) ? value.trim() : "未知";
+        return StringUtils.hasText(value) ? value.trim() : "unknown";
     }
 }

@@ -2,6 +2,7 @@ package com.bylw.foodforum.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.bylw.foodforum.dto.user.UserLoginDTO;
+import com.bylw.foodforum.dto.user.UserPasswordChangeDTO;
 import com.bylw.foodforum.dto.user.UserProfileUpdateDTO;
 import com.bylw.foodforum.dto.user.UserRegisterDTO;
 import com.bylw.foodforum.entity.User;
@@ -17,6 +18,8 @@ public interface UserService extends IService<User> {
     UserProfileVO getCurrentUserProfile();
 
     UserProfileVO updateCurrentUserProfile(UserProfileUpdateDTO updateDTO);
+
+    void changeCurrentUserPassword(UserPasswordChangeDTO passwordChangeDTO);
 
     User getCurrentUserEntity();
 }
