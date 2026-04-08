@@ -17,8 +17,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -40,7 +43,15 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class AiServiceImpl implements AiService {
 
     private static final Pattern BUDGET_PATTERN = Pattern.compile("(\\d{1,4})");
+    private static final Pattern LOCATION_HINT_PATTERN = Pattern.compile("(?:在|到|去|位于|附近)\\s*([\\p{L}\\p{N}\\-·\\s]{2,30})");
+    private static final Pattern PUNCT_PATTERN = Pattern.compile("[,，。！？!?.；;、/\\\\]+");
     private static final long SSE_TIMEOUT_MS = 1000L * 60L * 5L;
+
+    private static final Set<String> NOISE_WORDS = new HashSet<String>(Arrays.asList(
+        "推荐", "推荐下", "推荐一下", "有推荐吗", "有没有", "想吃", "吃什么", "哪里", "附近",
+        "我想", "我在", "请问", "帮我", "给我", "来点", "一下", "没事", "吗", "呢", "吧", "呀",
+        "预算", "人均", "元", "cny", "rmb"
+    ));
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -59,7 +70,7 @@ public class AiServiceImpl implements AiService {
     @Value("${app.ai.api-key:}")
     private String apiKey;
 
-    @Value("${app.ai.system-prompt:You are an AI food recommendation assistant. Prioritize recommendations based on real posts from this platform.}")
+    @Value("${app.ai.system-prompt:你是智能美食导航专家。请基于站内真实数据输出。}")
     private String systemPrompt;
 
     public AiServiceImpl(
@@ -80,19 +91,10 @@ public class AiServiceImpl implements AiService {
             throw new BusinessException("Message cannot be empty");
         }
 
-        String userMessage = message.trim();
+        String userMessage = canonicalizeUserQuery(message.trim());
         Integer budget = extractBudget(userMessage);
-        List<FoodPost> candidates = queryCandidatePosts(userMessage, budget);
-        String context = buildPostContext(candidates);
-
-        if (enabled && StringUtils.hasText(apiKey)) {
-            try {
-                return callModel(userMessage, context);
-            } catch (Exception ex) {
-                return buildLocalReply(userMessage, budget, candidates, "AI is temporarily unavailable. Switched to local recommendation mode:");
-            }
-        }
-        return buildLocalReply(userMessage, budget, candidates, "Running in local recommendation mode:");
+        RecommendationPlan plan = prepareRecommendationPlan(userMessage, budget);
+        return buildLocalReply(budget, plan);
     }
 
     @Override
@@ -101,23 +103,34 @@ public class AiServiceImpl implements AiService {
             throw new BusinessException("Prompt cannot be empty");
         }
 
-        final String userPrompt = prompt.trim();
+        final String userPrompt = canonicalizeUserQuery(prompt.trim());
         final SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
         final AtomicBoolean closed = new AtomicBoolean(false);
 
-        emitter.onCompletion(() -> closed.set(true));
-        emitter.onTimeout(() -> {
-            closed.set(true);
-            emitter.complete();
+        emitter.onCompletion(new Runnable() {
+            @Override
+            public void run() {
+                closed.set(true);
+            }
+        });
+        emitter.onTimeout(new Runnable() {
+            @Override
+            public void run() {
+                closed.set(true);
+                emitter.complete();
+            }
         });
         emitter.onError(ex -> closed.set(true));
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                streamChatInternal(userPrompt, emitter, closed);
-            } catch (Exception ex) {
-                safeSend(emitter, closed, "error", "stream_failed:" + ex.getMessage());
-                safeComplete(emitter, closed);
+        CompletableFuture.runAsync(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    streamChatInternal(userPrompt, emitter, closed);
+                } catch (Exception ex) {
+                    safeSend(emitter, closed, "error", "stream_failed:" + ex.getMessage());
+                    safeComplete(emitter, closed);
+                }
             }
         });
 
@@ -126,22 +139,8 @@ public class AiServiceImpl implements AiService {
 
     private void streamChatInternal(String userPrompt, SseEmitter emitter, AtomicBoolean closed) {
         Integer budget = extractBudget(userPrompt);
-        List<FoodPost> candidates = queryCandidatePosts(userPrompt, budget);
-        String context = buildPostContext(candidates);
-
-        if (!(enabled && StringUtils.hasText(apiKey))) {
-            streamLocalReply(userPrompt, budget, candidates, emitter, closed);
-            return;
-        }
-
-        try {
-            streamFromModel(userPrompt, context, emitter, closed);
-            safeSend(emitter, closed, "done", "[DONE]");
-            safeComplete(emitter, closed);
-        } catch (Exception ex) {
-            safeSend(emitter, closed, "error", "model_unavailable_fallback_local");
-            streamLocalReply(userPrompt, budget, candidates, emitter, closed);
-        }
+        RecommendationPlan plan = prepareRecommendationPlan(userPrompt, budget);
+        streamLocalReply(budget, plan, emitter, closed);
     }
 
     private void streamFromModel(String userPrompt, String context, SseEmitter emitter, AtomicBoolean closed) {
@@ -149,11 +148,11 @@ public class AiServiceImpl implements AiService {
 
         Map<String, Object> body = new HashMap<String, Object>();
         body.put("model", model);
-        body.put("temperature", 0.35);
+        body.put("temperature", 0.2);
         body.put("stream", Boolean.TRUE);
         body.put("messages", Arrays.asList(
             buildMessage("system", systemPrompt),
-            buildMessage("system", "Real post data from this platform:\n" + context),
+            buildMessage("system", "平台真实帖子数据:\n" + context),
             buildMessage("user", userPrompt)
         ));
 
@@ -221,13 +220,12 @@ public class AiServiceImpl implements AiService {
     }
 
     private void streamLocalReply(
-        String userPrompt,
         Integer budget,
-        List<FoodPost> candidates,
+        RecommendationPlan plan,
         SseEmitter emitter,
         AtomicBoolean closed
     ) {
-        String reply = buildLocalReply(userPrompt, budget, candidates, "Running in local recommendation mode:");
+        String reply = buildLocalReply(budget, plan);
         for (int i = 0; i < reply.length() && !closed.get(); i += 3) {
             int end = Math.min(i + 3, reply.length());
             safeSend(emitter, closed, "data", reply.substring(i, end));
@@ -269,10 +267,10 @@ public class AiServiceImpl implements AiService {
     private String callModel(String userMessage, String context) throws Exception {
         Map<String, Object> body = new HashMap<String, Object>();
         body.put("model", model);
-        body.put("temperature", 0.35);
+        body.put("temperature", 0.2);
         body.put("messages", Arrays.asList(
             buildMessage("system", systemPrompt),
-            buildMessage("system", "Real post data from this platform:\n" + context),
+            buildMessage("system", "平台真实帖子数据:\n" + context),
             buildMessage("user", userMessage)
         ));
 
@@ -302,6 +300,48 @@ public class AiServiceImpl implements AiService {
         return null;
     }
 
+    private RecommendationPlan prepareRecommendationPlan(String message, Integer budget) {
+        String targetLocation = extractLocationKeyword(message);
+        List<FoodPost> locationPosts = queryPostsByLocation(targetLocation, budget, 8);
+        boolean locationMatched = !locationPosts.isEmpty();
+        List<FoodPost> candidates = locationMatched ? locationPosts : queryCandidatePosts(message, budget);
+        return new RecommendationPlan(targetLocation, locationMatched, candidates);
+    }
+
+    private List<FoodPost> queryPostsByLocation(String location, Integer budget, int limit) {
+        if (!StringUtils.hasText(location)) {
+            return new ArrayList<FoodPost>();
+        }
+
+        List<String> aliases = buildLocationAliases(location);
+        if (aliases.isEmpty()) {
+            return new ArrayList<FoodPost>();
+        }
+
+        LambdaQueryWrapper<FoodPost> wrapper = new LambdaQueryWrapper<FoodPost>()
+            .eq(FoodPost::getStatus, 1)
+            .orderByDesc(FoodPost::getLikeCount)
+            .orderByDesc(FoodPost::getCommentCount)
+            .orderByDesc(FoodPost::getViewCount)
+            .orderByDesc(FoodPost::getCreatedAt)
+            .last("LIMIT " + Math.max(1, limit));
+
+        if (budget != null) {
+            wrapper.isNotNull(FoodPost::getPerCapita).le(FoodPost::getPerCapita, budget);
+        }
+
+        wrapper.and(item -> {
+            for (int i = 0; i < aliases.size(); i++) {
+                if (i > 0) {
+                    item.or();
+                }
+                item.like(FoodPost::getAddress, aliases.get(i));
+            }
+        });
+
+        return foodPostMapper.selectList(wrapper);
+    }
+
     private List<FoodPost> queryCandidatePosts(String message, Integer budget) {
         LambdaQueryWrapper<FoodPost> wrapper = new LambdaQueryWrapper<FoodPost>()
             .eq(FoodPost::getStatus, 1)
@@ -315,15 +355,27 @@ public class AiServiceImpl implements AiService {
             wrapper.isNotNull(FoodPost::getPerCapita).le(FoodPost::getPerCapita, budget);
         }
 
-        if (StringUtils.hasText(message)) {
-            String keyword = message.trim();
-            wrapper.and(item -> item.like(FoodPost::getTitle, keyword)
-                .or()
-                .like(FoodPost::getSummary, keyword)
-                .or()
-                .like(FoodPost::getAddress, keyword)
-                .or()
-                .like(FoodPost::getContent, keyword));
+        List<String> keywords = extractSearchKeywords(message);
+        if (!keywords.isEmpty()) {
+            wrapper.and(item -> {
+                boolean started = false;
+                for (String keyword : keywords) {
+                    if (!StringUtils.hasText(keyword)) {
+                        continue;
+                    }
+                    if (started) {
+                        item.or();
+                    }
+                    item.like(FoodPost::getTitle, keyword)
+                        .or()
+                        .like(FoodPost::getSummary, keyword)
+                        .or()
+                        .like(FoodPost::getAddress, keyword)
+                        .or()
+                        .like(FoodPost::getContent, keyword);
+                    started = true;
+                }
+            });
         }
 
         List<FoodPost> posts = foodPostMapper.selectList(wrapper);
@@ -379,38 +431,51 @@ public class AiServiceImpl implements AiService {
         return String.join("\n", lines);
     }
 
-    private String buildLocalReply(String userMessage, Integer budget, List<FoodPost> posts, String prefix) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(prefix).append("\n");
+    private String buildLocalReply(Integer budget, RecommendationPlan plan) {
+        List<FoodPost> posts = plan.candidates;
+        String targetLocation = StringUtils.hasText(plan.targetLocation) ? plan.targetLocation : inferTargetLocationFromPosts(posts);
 
-        if (posts == null || posts.isEmpty()) {
-            sb.append("No matching content found. Try another keyword, area, or budget.");
+        StringBuilder sb = new StringBuilder();
+        sb.append("📍 目标位置： ").append(targetLocation).append("\n");
+        sb.append("🍽 推荐方案：").append("\n");
+
+        if (StringUtils.hasText(plan.targetLocation) && !plan.locationMatched) {
+            sb.append("- 未找到“").append(plan.targetLocation).append("”的站内地址数据。\n");
+            FoodPost backup = findBackupPost(budget);
+            if (backup != null) {
+                sb.append("- **").append(safe(backup.getTitle())).append("** - ")
+                    .append(pickFeature(backup))
+                    .append(" | ")
+                    .append(formatPerCapita(backup.getPerCapita()))
+                    .append("\n");
+            } else {
+                sb.append("- **暂无备选** - 请补充预算或附近商圈关键词\n");
+            }
+            sb.append("💡 建议：先使用备选区域筛选，再补充预算可提升命中率。");
             return sb.toString();
         }
 
-        if (budget != null) {
-            sb.append("Recommendations under ").append(budget).append(" CNY per person:\n");
-        } else {
-            sb.append("Recommendations by current popularity:\n");
+        if (posts == null || posts.isEmpty()) {
+            sb.append("- 未找到可用推荐数据。\n");
+            sb.append("💡 建议：补充具体区域和预算，例如“武昌 人均50”。");
+            return sb.toString();
         }
 
-        for (int i = 0; i < posts.size() && i < 5; i++) {
+        for (int i = 0; i < posts.size() && i < 3; i++) {
             FoodPost post = posts.get(i);
-            sb.append(i + 1)
-                .append(". ")
-                .append(safe(post.getTitle()))
-                .append(" (per capita: ")
-                .append(post.getPerCapita() == null ? "unknown" : post.getPerCapita() + " CNY")
-                .append(", address: ")
-                .append(safe(post.getAddress()))
-                .append(", detail: /food/")
-                .append(post.getId())
-                .append(")\n");
+            sb.append("- **").append(safe(post.getTitle())).append("** - ")
+                .append(pickFeature(post))
+                .append(" | ")
+                .append(formatPerCapita(post.getPerCapita()))
+                .append("\n");
         }
 
-        sb.append("\nShare more taste, budget, and location details for a more precise recommendation.");
-        sb.append("\nInput: ").append(userMessage);
-        return sb.toString().trim();
+        if (budget != null) {
+            sb.append("💡 建议：建议优先筛选人均 ").append(budget).append(" 元以内，并避开 12:00 高峰期。");
+        } else {
+            sb.append("💡 建议：建议避开 12:00 高峰期，优先选择可提前下单门店。");
+        }
+        return sb.toString();
     }
 
     private Map<String, String> buildMessage(String role, String content) {
@@ -422,5 +487,190 @@ public class AiServiceImpl implements AiService {
 
     private String safe(String value) {
         return StringUtils.hasText(value) ? value.trim() : "unknown";
+    }
+
+    private String canonicalizeUserQuery(String input) {
+        if (!StringUtils.hasText(input)) {
+            return "";
+        }
+        return input.trim();
+    }
+
+    private String normalizeSearchKeyword(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "";
+        }
+        String text = raw.trim().toLowerCase();
+        text = text.replaceAll("(我想吃|我想|我在|想吃|想找|想要|来点|请问|有没有|推荐一下|推荐|附近|哪里|吃什么|没事)", " ");
+        text = text.replaceAll("(人均\\s*\\d{1,4}|预算\\s*\\d{1,4}|\\d{1,4}\\s*元)", " ");
+        text = PUNCT_PATTERN.matcher(text).replaceAll(" ");
+        text = text.replaceAll("[^\\p{L}\\p{N}]+", " ");
+        text = text.replaceAll("\\s+", " ").trim();
+        return StringUtils.hasText(text) ? text : raw.trim();
+    }
+
+    private List<String> extractSearchKeywords(String message) {
+        Set<String> set = new LinkedHashSet<String>();
+        String raw = message == null ? "" : message.trim();
+        if (StringUtils.hasText(raw)) {
+            set.add(raw);
+        }
+
+        String normalized = normalizeSearchKeyword(raw);
+        if (StringUtils.hasText(normalized)) {
+            set.add(normalized);
+
+            String compact = normalized.replace(" ", "");
+            if (StringUtils.hasText(compact)) {
+                set.add(compact);
+            }
+
+            for (String token : normalized.split("\\s+")) {
+                if (StringUtils.hasText(token) && token.length() >= 2 && !NOISE_WORDS.contains(token)) {
+                    set.add(token.trim());
+                }
+            }
+        }
+
+        List<String> result = new ArrayList<String>();
+        for (String keyword : set) {
+            if (StringUtils.hasText(keyword) && keyword.trim().length() >= 2) {
+                result.add(keyword.trim());
+            }
+        }
+        return result;
+    }
+
+    private String extractLocationKeyword(String message) {
+        if (!StringUtils.hasText(message)) {
+            return "";
+        }
+
+        String raw = message.trim();
+        Matcher matcher = LOCATION_HINT_PATTERN.matcher(raw);
+        while (matcher.find()) {
+            String candidate = cleanLocationCandidate(matcher.group(1));
+            if (isLikelyLocationToken(candidate)) {
+                return candidate;
+            }
+        }
+
+        String normalized = normalizeSearchKeyword(raw);
+        if (!StringUtils.hasText(normalized)) {
+            return "";
+        }
+
+        String best = "";
+        for (String token : normalized.split("\\s+")) {
+            String candidate = cleanLocationCandidate(token);
+            if (!isLikelyLocationToken(candidate)) {
+                continue;
+            }
+            if (candidate.length() > best.length()) {
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    private String cleanLocationCandidate(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "";
+        }
+        String text = raw.trim();
+        text = text.replaceAll("(人均\\s*\\d{1,4}|预算\\s*\\d{1,4}|\\d{1,4}\\s*元)", " ");
+        text = text.replaceAll("(推荐一下|推荐|想吃|吃什么|有没有|附近|哪里|没事|一下|请问|帮我)", " ");
+        text = text.replaceAll("\\s+", " ").trim();
+        return text;
+    }
+
+    private boolean isLikelyLocationToken(String token) {
+        if (!StringUtils.hasText(token) || token.length() < 2) {
+            return false;
+        }
+        String text = token.trim();
+        if (NOISE_WORDS.contains(text) || text.matches("\\d+")) {
+            return false;
+        }
+        String lower = text.toLowerCase();
+        if (lower.contains("省") || lower.contains("市") || lower.contains("区") || lower.contains("县")
+            || lower.contains("镇") || lower.contains("乡") || lower.contains("村")
+            || lower.contains("路") || lower.contains("街") || lower.contains("道") || lower.contains("巷")
+            || lower.contains("广场") || lower.contains("商圈") || lower.contains("中心")
+            || lower.contains("defense") || lower.contains("défense")) {
+            return true;
+        }
+        return text.matches(".*[\\u4e00-\\u9fa5].*") && text.length() <= 12;
+    }
+
+    private List<String> buildLocationAliases(String location) {
+        LinkedHashSet<String> aliases = new LinkedHashSet<String>();
+        if (!StringUtils.hasText(location)) {
+            return new ArrayList<String>();
+        }
+        String loc = location.trim();
+        aliases.add(loc);
+
+        String compact = loc.replace(" ", "");
+        if (!compact.equals(loc) && compact.length() >= 2) {
+            aliases.add(compact);
+        }
+
+        String lower = loc.toLowerCase();
+        if (loc.contains("拉德芳斯") || lower.contains("la défense") || lower.contains("la defense") || lower.contains("defense")) {
+            aliases.add("拉德芳斯");
+            aliases.add("La Défense");
+            aliases.add("La Defense");
+        }
+        return new ArrayList<String>(aliases);
+    }
+
+    private FoodPost findBackupPost(Integer budget) {
+        LambdaQueryWrapper<FoodPost> wrapper = new LambdaQueryWrapper<FoodPost>()
+            .eq(FoodPost::getStatus, 1)
+            .orderByDesc(FoodPost::getLikeCount)
+            .orderByDesc(FoodPost::getCommentCount)
+            .orderByDesc(FoodPost::getViewCount)
+            .orderByDesc(FoodPost::getCreatedAt)
+            .last("LIMIT 1");
+        if (budget != null) {
+            wrapper.isNotNull(FoodPost::getPerCapita).le(FoodPost::getPerCapita, budget);
+        }
+        List<FoodPost> posts = foodPostMapper.selectList(wrapper);
+        return posts.isEmpty() ? null : posts.get(0);
+    }
+
+    private String inferTargetLocationFromPosts(List<FoodPost> posts) {
+        if (posts == null || posts.isEmpty()) {
+            return "未识别具体位置";
+        }
+        FoodPost first = posts.get(0);
+        return StringUtils.hasText(first.getAddress()) ? first.getAddress().trim() : "热门区域";
+    }
+
+    private String pickFeature(FoodPost post) {
+        String summary = post == null ? "" : post.getSummary();
+        if (StringUtils.hasText(summary)) {
+            String s = summary.trim();
+            return s.length() > 24 ? s.substring(0, 24) + "..." : s;
+        }
+        String title = safe(post == null ? null : post.getTitle());
+        return title.length() > 24 ? title.substring(0, 24) + "..." : title;
+    }
+
+    private String formatPerCapita(Integer perCapita) {
+        return perCapita == null ? "人均 未知" : ("人均 " + perCapita + " 元");
+    }
+
+    private static class RecommendationPlan {
+        private final String targetLocation;
+        private final boolean locationMatched;
+        private final List<FoodPost> candidates;
+
+        private RecommendationPlan(String targetLocation, boolean locationMatched, List<FoodPost> candidates) {
+            this.targetLocation = targetLocation;
+            this.locationMatched = locationMatched;
+            this.candidates = candidates;
+        }
     }
 }

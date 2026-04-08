@@ -169,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed, onMounted, ref } from 'vue'
 import { ElButton, ElCascader, ElDialog, ElForm, ElFormItem, ElInput, ElOption, ElSelect, ElUpload } from 'element-plus'
 import type { UploadFile, UploadRequestOptions, UploadUserFile } from 'element-plus'
@@ -210,7 +211,7 @@ interface DishFormItem {
   files: DishUploadFile[]
 }
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 
 const categories = ref<CategoryItem[]>([])
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -575,3 +576,5 @@ onMounted(async () => {
   .dish-uploader :deep(.el-upload-list__item) { width: 86px; height: 86px; }
 }
 </style>
+
+

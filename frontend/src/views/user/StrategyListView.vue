@@ -1,23 +1,23 @@
-<template>
+﻿<template>
   <section class="strategy-screen">
     <article class="strategy-hero">
       <div>
         <p class="eyebrow">City Notes</p>
-        <h2>把吃什么、怎么排、什么时间去最舒服，整理成一份真正有用的城市味觉攻略。</h2>
+        <h2>鎶婂悆浠€涔堛€佹€庝箞鎺掋€佷粈涔堟椂闂村幓鏈€鑸掓湇锛屾暣鐞嗘垚涓€浠界湡姝ｆ湁鐢ㄧ殑鍩庡競鍛宠鏀荤暐銆?/h2>
       </div>
       <div class="hero-side">
-        <strong>{{ total }} 篇</strong>
-        <span>当前可浏览攻略</span>
+        <strong>{{ total }} 绡?/strong>
+        <span>褰撳墠鍙祻瑙堟敾鐣?/span>
       </div>
     </article>
 
     <section class="filter-panel">
       <label class="field">
-        <span>搜索攻略</span>
-        <input v-model.trim="keyword" type="text" placeholder="按标题、摘要或正文搜索" @keyup.enter="applyFilters" />
+        <span>鎼滅储鏀荤暐</span>
+        <input v-model.trim="keyword" type="text" placeholder="鎸夋爣棰樸€佹憳瑕佹垨姝ｆ枃鎼滅储" @keyup.enter="applyFilters" />
       </label>
-      <button class="ghost-btn action-btn" type="button" @click="applyFilters">搜索</button>
-      <button class="ghost-btn action-btn" type="button" @click="resetFilters">重置</button>
+      <button class="ghost-btn action-btn" type="button" @click="applyFilters">鎼滅储</button>
+      <button class="ghost-btn action-btn" type="button" @click="resetFilters">閲嶇疆</button>
     </section>
 
     <div v-if="records.length" class="strategy-grid">
@@ -29,25 +29,26 @@
             <span>{{ formatDate(item.publishedAt || item.createdAt) }}</span>
           </div>
           <h3>{{ item.title }}</h3>
-          <p>{{ item.summary || '这是一篇适合点开细读的本地攻略。' }}</p>
+          <p>{{ item.summary || '杩欐槸涓€绡囬€傚悎鐐瑰紑缁嗚鐨勬湰鍦版敾鐣ャ€? }}</p>
         </div>
       </RouterLink>
     </div>
 
     <div v-else class="empty-panel">
-      <strong>暂时没有匹配的攻略</strong>
-      <p>你可以换个关键词试试，或者先准备几篇答辩展示用攻略数据。</p>
+      <strong>鏆傛椂娌℃湁鍖归厤鐨勬敾鐣?/strong>
+      <p>浣犲彲浠ユ崲涓叧閿瘝璇曡瘯锛屾垨鑰呭厛鍑嗗鍑犵瘒绛旇京灞曠ず鐢ㄦ敾鐣ユ暟鎹€?/p>
     </div>
 
     <div class="pager">
-      <button class="ghost-btn pager-btn" type="button" :disabled="current <= 1" @click="changePage(current - 1)">上一页</button>
-      <span>第 {{ current }} / {{ totalPages }} 页</span>
-      <button class="ghost-btn pager-btn" type="button" :disabled="current >= totalPages" @click="changePage(current + 1)">下一页</button>
+      <button class="ghost-btn pager-btn" type="button" :disabled="current <= 1" @click="changePage(current - 1)">涓婁竴椤?/button>
+      <span>绗?{{ current }} / {{ totalPages }} 椤?/span>
+      <button class="ghost-btn pager-btn" type="button" :disabled="current >= totalPages" @click="changePage(current + 1)">涓嬩竴椤?/button>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchStrategyList, type StrategyCard } from '@/api/strategy'
@@ -55,7 +56,7 @@ import { fetchStrategyList, type StrategyCard } from '@/api/strategy'
 const route = useRoute()
 const router = useRouter()
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 const fallbackImage = 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=1200&q=80'
 const keyword = ref('')
 const current = ref(1)
@@ -292,3 +293,5 @@ onMounted(async () => {
   }
 }
 </style>
+
+

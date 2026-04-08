@@ -152,6 +152,7 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import CommentSection from '@/components/CommentSection.vue'
@@ -161,7 +162,7 @@ import { fetchFoodPostDetail, updateFoodPost, type FoodPostDetail } from '@/api/
 import { fetchCategoryOptions, type CategoryItem } from '@/api/category'
 import { authState } from '@/stores/auth'
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 const fallbackImage = 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1200&q=80'
 
 const route = useRoute()
@@ -351,3 +352,5 @@ onMounted(async () => {
   .dish-image { width: calc((100% - 8px) / 2); }
 }
 </style>
+
+

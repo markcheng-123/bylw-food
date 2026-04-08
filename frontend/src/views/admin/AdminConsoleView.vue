@@ -189,6 +189,7 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -370,7 +371,7 @@ const I18N: Record<'zh' | 'en', ViewText> = {
   },
 }
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 const route = useRoute()
 const router = useRouter()
 const { adminUiState } = useAdminUi()
@@ -949,3 +950,5 @@ onMounted(async () => {
   }
 }
 </style>
+
+

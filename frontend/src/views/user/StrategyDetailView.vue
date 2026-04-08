@@ -1,13 +1,13 @@
-<template>
+﻿<template>
   <section v-if="detail" class="strategy-detail">
     <article class="detail-hero">
       <img :src="resolveImage(detail.coverImage)" :alt="detail.title" />
       <div class="hero-copy">
         <p class="eyebrow">Guide Story</p>
         <h2>{{ detail.title }}</h2>
-        <p class="summary">{{ detail.summary || '这篇攻略整理了适合展示和实际使用的路线建议。' }}</p>
+        <p class="summary">{{ detail.summary || '杩欑瘒鏀荤暐鏁寸悊浜嗛€傚悎灞曠ず鍜屽疄闄呬娇鐢ㄧ殑璺嚎寤鸿銆? }}</p>
         <div class="meta-row">
-          <span>作者：{{ detail.authorNickname }}</span>
+          <span>浣滆€咃細{{ detail.authorNickname }}</span>
           <span>发布时间：{{ formatDate(detail.publishedAt || detail.createdAt) }}</span>
         </div>
       </div>
@@ -16,7 +16,7 @@
     <article class="content-card">
       <div class="content-head">
         <p class="eyebrow">Long Read</p>
-        <h3>完整攻略</h3>
+        <h3>瀹屾暣鏀荤暐</h3>
       </div>
       <p class="content-text">{{ detail.content }}</p>
     </article>
@@ -24,13 +24,14 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchStrategyDetail, type StrategyDetail } from '@/api/strategy'
 
 const route = useRoute()
 const detail = ref<StrategyDetail | null>(null)
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 const fallbackImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80'
 
 function resolveImage(url: string | null) {
@@ -123,3 +124,5 @@ onMounted(async () => {
   }
 }
 </style>
+
+

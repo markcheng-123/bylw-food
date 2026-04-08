@@ -148,6 +148,7 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchAdminPosts, fetchMerchantApplicationsForAdmin } from '@/api/admin'
@@ -157,7 +158,7 @@ import { useAdminUi } from '@/stores/adminUi'
 import { authState, clearAuthSession, updateAuthUser } from '@/stores/auth'
 
 const SIDEBAR_KEY = 'bylw_admin_sidebar_collapsed'
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 
 const route = useRoute()
 const router = useRouter()
@@ -985,3 +986,5 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+
+

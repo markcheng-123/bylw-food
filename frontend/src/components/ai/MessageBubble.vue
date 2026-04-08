@@ -1,17 +1,42 @@
 <template>
   <div :class="role === 'user' ? 'row user' : 'row ai'">
     <img v-if="role === 'ai'" class="avatar" :src="avatar" alt="ai-avatar" />
-    <div class="bubble">{{ content }}</div>
+    <div class="bubble" v-html="formattedContent"></div>
     <img v-if="role === 'user'" class="avatar" :src="avatar" alt="user-avatar" />
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   role: 'user' | 'ai'
   content: string
   avatar: string
 }>()
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function renderBasicMarkdown(text: string): string {
+  // Keep rendering minimal and safe: basic emphasis + line breaks.
+  const escaped = escapeHtml(text)
+  return escaped
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Handle single-star emphasis like "*类别*".
+    .replace(/(^|[^*])\*([^*\n]+)\*(?=$|[^*])/g, '$1<strong>$2</strong>')
+    // If model returns unpaired stars, drop them to avoid visual noise.
+    .replace(/\*/g, '')
+    .replace(/\n/g, '<br>')
+}
+
+const formattedContent = computed(() => renderBasicMarkdown(props.content || ''))
 </script>
 
 <style scoped>

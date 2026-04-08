@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { clearAuthSession, getToken } from '@/stores/auth'
+import { getApiBaseUrl } from '@/config/runtime'
 
 interface ApiEnvelope<T> {
   code: number
@@ -7,7 +8,7 @@ interface ApiEnvelope<T> {
   data: T
 }
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8080/api'
+const apiBaseUrl = getApiBaseUrl()
 
 const http = axios.create({
   baseURL: apiBaseUrl,

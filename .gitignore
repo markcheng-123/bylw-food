@@ -31,6 +31,7 @@ replay_pid*
 backend/.env
 backend/.env.local
 backend/config/local-secrets.yml
+backend/config/runtime.yml
 
 # Frontend local env files
 frontend/.env

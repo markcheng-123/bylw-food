@@ -89,10 +89,11 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed, ref, watch } from 'vue'
 import { fetchMerchantCard, type MerchantCard } from '@/api/merchant'
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 
 const props = defineProps<{
   visible: boolean
@@ -203,3 +204,5 @@ watch(
   .card-shell { padding: 16px; }
 }
 </style>
+
+

@@ -216,6 +216,7 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMenu, ElMenuItem } from 'element-plus'
 import 'element-plus/es/components/menu/style/css'
@@ -242,7 +243,7 @@ import {
 import { uploadImage } from '@/api/upload'
 import { updateAuthUser } from '@/stores/auth'
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 
 const activeMenu = ref('profile')
 
@@ -768,3 +769,5 @@ onMounted(async () => {
   .row-item { flex-direction: column; align-items: flex-start; }
 }
 </style>
+
+

@@ -43,12 +43,13 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authState, clearAuthSession } from '@/stores/auth'
 import AiChatWindow from '@/components/ai/AiChatWindow.vue'
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 const router = useRouter()
 const currentUser = computed(() => authState.user)
 
@@ -201,3 +202,5 @@ function handleLogout() {
   }
 }
 </style>
+
+

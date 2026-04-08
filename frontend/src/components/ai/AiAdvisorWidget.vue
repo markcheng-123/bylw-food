@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="advisor-widget">
     <button v-if="!open" class="float-btn" type="button" @click="open = true">
       <span>🦞</span>
@@ -46,6 +46,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElButton } from 'element-plus'
 import MessageBubble from './MessageBubble.vue'
 import { authState } from '@/stores/auth'
+import { getApiBaseUrl, getApiHost } from '@/config/runtime'
 
 type AiState = 'idle' | 'thinking' | 'speaking'
 type Role = 'user' | 'ai'
@@ -63,11 +64,11 @@ const inputText = ref('')
 const listRef = ref<HTMLElement | null>(null)
 
 const messages = ref<ChatMessage[]>([
-  { id: 1, role: 'ai', content: '你好，我是 Food Advisor。告诉我预算、口味和区域，我会按站内数据给你推荐。' },
+  { id: 1, role: 'ai', content: '输入预算、口味、区域，我将按站内真实数据推荐。' },
 ])
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8080/api'
-const API_HOST = API_BASE_URL.replace(/\/api\/?$/, '')
+const API_BASE_URL = getApiBaseUrl()
+const API_HOST = getApiHost()
 const aiAvatar =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="32" fill="%23f4e5d3"/><text x="32" y="40" text-anchor="middle" font-size="22">🦞</text></svg>'
 

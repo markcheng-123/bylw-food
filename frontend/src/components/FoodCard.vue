@@ -26,9 +26,10 @@
 </template>
 
 <script setup lang="ts">
+import { getApiHost } from '@/config/runtime'
 import type { FoodPostCard } from '@/api/post'
 
-const API_HOST = 'http://localhost:8080'
+const API_HOST = getApiHost()
 const fallbackImage = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80'
 
 defineProps<{
@@ -170,3 +171,5 @@ function resolveImage(url: string | null) {
   text-overflow: ellipsis;
 }
 </style>
+
+

@@ -29,6 +29,6 @@ public class StrategyController {
 
     @GetMapping("/{id}")
     public ApiResponse<StrategyDetailVO> getStrategyDetail(@PathVariable Long id) {
-        return ApiResponse.success(strategyService.getStrategyDetail(id));
+        return ApiResponse.success(strategyService.getStrategyDetail(id)); 
     }
 }

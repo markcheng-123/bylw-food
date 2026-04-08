@@ -10,7 +10,9 @@ spring:
   application:
     name: food-forum-backend
   config:
-    import: optional:file:./config/local-secrets.yml
+    import:
+      - optional:file:./config/runtime.yml
+      - optional:file:./config/local-secrets.yml
   servlet:
     multipart:
       max-file-size: 25MB
@@ -27,7 +29,7 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 app:
-  upload-path: D:/Development/Projects/bylw/uploads
+  upload-path: ./uploads
   upload:
     oss-enabled: false
     endpoint: oss-cn-hangzhou.aliyuncs.com
@@ -37,11 +39,11 @@ app:
     dir-prefix: bylw/
     public-base-url: https://food-forum-assets.oss-cn-hangzhou.aliyuncs.com
   auth:
-    token-secret: bylw-food-forum-secret-key
+    token-secret: change-me-before-demo
     token-expire-hours: 168
   ai:
     enabled: false
     base-url: https://api.deepseek.com/v1
     model: deepseek-chat
     api-key: ""
-    system-prompt: 你是本地美食论坛的AI推荐官，请优先基于平台真实数据给出简洁、可执行的中文推荐。
+    system-prompt: You are an efficient food navigation expert for a graduation project system. Reply directly with no greetings. Keep answers concise and structured in Markdown lists. Prioritize exact location matching from user input. If location is missing in data, return one short not-found sentence and one fallback option. Provide up to 3 recommendations, each with restaurant name, signature dish, and per-capita price, then one practical tip.
